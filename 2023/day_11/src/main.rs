@@ -8,20 +8,7 @@ fn main() {
 
     let content: Vec<&str> = raw.lines().filter(|line| !line.is_empty()).collect();
 
-    let mut reality = get_space(content);
-
-    expand_space(&mut reality);
-
-    // for row in &reality.space {
-    //     for c in row {
-    //         print!("{}", c);
-    //     }
-    //     println!();
-    // }
-
-    locate_galaxies(&mut reality);
-
-    // println!("{:?}", reality.galaxies);
+    let reality = get_space(content);
 
     let mut combinations = Vec::new();
 
@@ -31,27 +18,23 @@ fn main() {
         }
     }
 
-    // println!("{:?}", combinations.len());
+    let empty_rows = get_empty_rows(&reality);
+    let empty_columns = get_empty_columns(&reality);
+
+    let mut sum_p1 = 0;
+    let mut sum_p2 = 0;
+
+    for (start, end) in combinations {
+        sum_p1 += get_shortest_path_manhattan(start, end, empty_rows.clone(), empty_columns.clone(), 1);
+        sum_p2 += get_shortest_path_manhattan(start, end, empty_rows.clone(), empty_columns.clone(), 10);
+    }
+
+    println!("P1: {}", sum_p1);
+    println!("P2: {}", sum_p2);
 }
 
-fn get_space(content: Vec<&str>) -> Reality {
-    let mut space: Vec<Vec<char>> = Vec::new();
-    for line in content {
-        let mut row: Vec<char> = Vec::new();
-        for c in line.chars() {
-            row.push(c);
-        }
-        space.push(row);
-    }
-    Reality {
-        space,
-        galaxies: Vec::new(),
-    }
-}
-
-fn expand_space(reality: &mut Reality) -> &Reality {
-    let mut rows_to_insert = Vec::new();
-    let mut columns_to_insert = Vec::new();
+fn get_empty_rows(reality: &Reality) -> Vec<usize> {
+    let mut empty_rows = Vec::new();
 
     for (index, row) in reality.space.iter().enumerate() {
         let collapsed_row: String = row.iter().collect();
@@ -59,14 +42,14 @@ fn expand_space(reality: &mut Reality) -> &Reality {
             continue;
         }
 
-        rows_to_insert.push(index);
+        empty_rows.push(index);
     }
 
-    for index in rows_to_insert {
-        reality
-            .space
-            .insert(index, vec!['.'; reality.space[index].len()]);
-    }
+    empty_rows
+}
+
+fn get_empty_columns(reality: &Reality) -> Vec<usize> {
+    let mut empty_columns = Vec::new();
 
     for column_index in 0..reality.space[0].len() {
         let mut collapsed_column: String = String::new();
@@ -78,19 +61,22 @@ fn expand_space(reality: &mut Reality) -> &Reality {
             continue;
         }
 
-        columns_to_insert.push(column_index);
+        empty_columns.push(column_index);
     }
 
-    for column_index in columns_to_insert {
-        for row in &mut reality.space {
-            row.insert(column_index, '.');
-        }
-    }
-
-    reality
+    empty_columns
 }
 
-fn locate_galaxies(reality: &mut Reality) -> &Reality {
+fn get_space(content: Vec<&str>) -> Reality {
+    let mut space: Vec<Vec<char>> = Vec::new();
+    for line in content {
+        let mut row: Vec<char> = Vec::new();
+        for c in line.chars() {
+            row.push(c);
+        }
+        space.push(row);
+    }
+    let mut reality = Reality { space, galaxies: Vec::new() };
     for (row_index, row) in reality.space.iter().enumerate() {
         for (column_index, c) in row.iter().enumerate() {
             if *c == '#' {
@@ -98,6 +84,38 @@ fn locate_galaxies(reality: &mut Reality) -> &Reality {
             }
         }
     }
-
     reality
+}
+
+fn get_shortest_path_manhattan(start: (usize, usize), end: (usize, usize), empty_rows: Vec<usize>, empty_columns: Vec<usize>, expansion_factor: usize) -> usize {
+    let (start_row, start_column) = start;
+    let (end_row, end_column) = end;
+
+    let mut row_distance = if start_row > end_row {
+        start_row - end_row
+    } else {
+        end_row - start_row
+    };
+
+    let mut column_distance = if start_column > end_column {
+        start_column - end_column
+    } else {
+        end_column - start_column
+    };
+
+    for &empty_row in &empty_rows {
+        if (start_row < end_row && empty_row > start_row && empty_row < end_row) ||
+           (start_row > end_row && empty_row < start_row && empty_row > end_row) {
+            row_distance += expansion_factor;
+        }
+    }
+
+    for &empty_column in &empty_columns {
+        if (start_column < end_column && empty_column > start_column && empty_column < end_column) ||
+           (start_column > end_column && empty_column < start_column && empty_column > end_column) {
+            column_distance += expansion_factor;
+        }
+    }
+
+    row_distance + column_distance
 }
