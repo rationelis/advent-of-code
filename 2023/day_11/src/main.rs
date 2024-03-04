@@ -6,7 +6,9 @@ struct Reality {
 fn main() {
     let raw = std::fs::read_to_string("input.txt").expect("could not read file");
 
-    let content: Vec<&str> = raw.lines().filter(|line| !line.is_empty()).collect();
+    let content: Vec<&str> = raw.lines().filter(|line| !line.is_empty()).collect()
+
+    content[0].chars().int
 
     let reality = get_space(content);
 
