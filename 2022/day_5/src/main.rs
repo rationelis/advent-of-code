@@ -4,7 +4,7 @@ use std::collections::VecDeque;
 fn main() {
     let lines = read_input_file("input.txt").unwrap();
 
-    println!("Part 1: {:?}", part1(lines.clone()));
+    println!("Part 1: {}", part1(lines.clone()));
     println!("Part 2: {}", part2(lines.clone()));
 }
 
@@ -62,6 +62,32 @@ fn part1(lines: Vec<String>) -> String {
     crates.iter().map(|c| *c.front().unwrap() as u8 as char).collect()
 }
 
-fn part2(lines: Vec<String>) -> i32 {
-    0
+fn part2(lines: Vec<String>) -> String {
+    let mut parts = lines.split(|line| line.is_empty());
+
+    let configuration = parts.next().unwrap();
+
+    let mut crates = get_crates(configuration);    
+    
+    let instructions = parts.next().unwrap();
+    
+    for instruction in instructions {
+        let mut parts = instruction.split_whitespace();
+        let amount_to_move = parts.nth(1).unwrap().parse::<i32>().unwrap();
+        let from = parts.nth(1).unwrap().parse::<i32>().unwrap() - 1;
+        let to = parts.nth(1).unwrap().parse::<i32>().unwrap() - 1;
+
+        let mut values = Vec::new();
+        for _ in 0..amount_to_move {
+            values.push(crates[from as usize].pop_front().unwrap());
+        }
+        
+        values.reverse();
+
+        for value in values {
+            crates[to as usize].push_front(value);
+        }
+    }
+
+    crates.iter().map(|c| *c.front().unwrap() as u8 as char).collect()
 }
