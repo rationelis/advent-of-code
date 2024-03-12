@@ -1,14 +1,87 @@
 use utils::read_input_file;
 use std::collections::VecDeque;
 
+#[derive(Clone)]
+struct Crate {
+    stack: VecDeque<i32>,
+}
+
+#[derive(Clone, Copy)]
+struct MoveInstruction {
+    amount_to_move: i32,
+    from: i32,
+    to: i32,
+}
+
 fn main() {
     let lines = read_input_file("input.txt").unwrap();
 
-    println!("Part 1: {}", part1(lines.clone()));
-    println!("Part 2: {}", part2(lines.clone()));
+    let mut parts = lines.split(|line| line.is_empty());
+
+    let configuration = parts.next().unwrap();
+
+    let crates = get_crates(configuration);
+
+    let instructions = parts.next().unwrap();
+
+    let moves = parse_instructions(instructions);
+
+    let mut crates_part1 = crates.clone();
+    let mut crates_part2 = crates.clone();
+
+    for instruction in moves.iter() {
+        perform_move(&mut crates_part1, *instruction);
+        perform_move_reverse(&mut crates_part2, *instruction);
+    }
+
+    let part1 = crates_part1.iter().map(|c| *c.stack.front().unwrap() as u8 as char).collect::<String>();
+    let part2 = crates_part2.iter().map(|c| *c.stack.front().unwrap() as u8 as char).collect::<String>();
+
+    println!("Part 1: {}", part1);
+    println!("Part 2: {}", part2);
 }
 
-fn get_crates(configuration: &[String]) -> Vec<VecDeque<i32>> {
+fn parse_instructions(instructions: &[String]) -> Vec<MoveInstruction> {
+    let mut move_instructions = Vec::new();
+
+    for line in instructions {
+        let mut parts = line.split_whitespace();
+        let amount_to_move = parts.nth(1).unwrap().parse::<i32>().unwrap();
+        let from = parts.nth(1).unwrap().parse::<i32>().unwrap() - 1;
+        let to = parts.nth(1).unwrap().parse::<i32>().unwrap() - 1;
+
+        move_instructions.push(MoveInstruction {
+            amount_to_move,
+            from,
+            to,
+        });
+    }
+
+    move_instructions
+}
+
+fn perform_move(crates: &mut Vec<Crate>, instruction: MoveInstruction) {
+    for _ in 0..instruction.amount_to_move {
+        let value = crates[instruction.from as usize].stack.pop_front().unwrap();
+        crates[instruction.to as usize].stack.push_front(value);
+    }
+}
+
+fn perform_move_reverse(crates: &mut Vec<Crate>, instruction: MoveInstruction) {
+    let mut values = Vec::new();
+
+    for _ in 0..instruction.amount_to_move {
+        values.push(crates[instruction.from as usize].stack.pop_front().unwrap());
+    }
+
+    values.reverse();
+
+    for value in values {
+        crates[instruction.to as usize].stack.push_front(value);
+    }
+}
+
+fn get_crates(configuration: &[String]) -> Vec<Crate> {
     let stack_numbers: Vec<char> = configuration.iter().flat_map(|s| s.chars()).filter(|c| c.is_digit(10)).collect();
     
     let mut crates: Vec<VecDeque<i32>> = Vec::new();
@@ -35,59 +108,6 @@ fn get_crates(configuration: &[String]) -> Vec<VecDeque<i32>> {
         }
     }
     
-    crates
+    crates.iter().map(|stack| Crate { stack: stack.clone() }).collect()     
 }
 
-fn part1(lines: Vec<String>) -> String {
-    let mut parts = lines.split(|line| line.is_empty());
-
-    let configuration = parts.next().unwrap();
-
-    let mut crates = get_crates(configuration);    
-    
-    let instructions = parts.next().unwrap();
-    
-    for instruction in instructions {
-        let mut parts = instruction.split_whitespace();
-        let amount_to_move = parts.nth(1).unwrap().parse::<i32>().unwrap();
-        let from = parts.nth(1).unwrap().parse::<i32>().unwrap() - 1;
-        let to = parts.nth(1).unwrap().parse::<i32>().unwrap() - 1;
-
-        for _ in 0..amount_to_move {
-            let value = crates[from as usize].pop_front().unwrap();
-            crates[to as usize].push_front(value);
-        }
-    }
-
-    crates.iter().map(|c| *c.front().unwrap() as u8 as char).collect()
-}
-
-fn part2(lines: Vec<String>) -> String {
-    let mut parts = lines.split(|line| line.is_empty());
-
-    let configuration = parts.next().unwrap();
-
-    let mut crates = get_crates(configuration);    
-    
-    let instructions = parts.next().unwrap();
-    
-    for instruction in instructions {
-        let mut parts = instruction.split_whitespace();
-        let amount_to_move = parts.nth(1).unwrap().parse::<i32>().unwrap();
-        let from = parts.nth(1).unwrap().parse::<i32>().unwrap() - 1;
-        let to = parts.nth(1).unwrap().parse::<i32>().unwrap() - 1;
-
-        let mut values = Vec::new();
-        for _ in 0..amount_to_move {
-            values.push(crates[from as usize].pop_front().unwrap());
-        }
-        
-        values.reverse();
-
-        for value in values {
-            crates[to as usize].push_front(value);
-        }
-    }
-
-    crates.iter().map(|c| *c.front().unwrap() as u8 as char).collect()
-}
