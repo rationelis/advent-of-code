@@ -9,20 +9,13 @@ fn main() {
 
     let forest = parse_forest(lines.clone());
 
-    let views = count_visible_trees(&forest);
+    let visible_trees = solve_part1(&forest);
 
-    print_forest(&forest);
+    println!("Part 1: {}", visible_trees);
+    
+    let max_scenic_score = solve_part2(&forest);
 
-    println!("Total visible trees: {}", views);
-}
-
-fn print_forest(forest: &Forest) {
-    for row in 0..forest.trees.len() {
-        for col in 0..forest.trees[0].len() {
-            print!("{}", forest.trees[row][col]);
-        }
-        println!();
-    }
+    println!("Part 2: {}", max_scenic_score)
 }
 
 fn parse_forest(lines: Vec<String>) -> Forest {
@@ -34,9 +27,9 @@ fn parse_forest(lines: Vec<String>) -> Forest {
     Forest { trees }
 }
 
-fn is_tree_visible_in_horizontal_range(forest: &Forest, start_col: usize, end_col: usize, row: usize, value: i32) -> bool {
-    for col in start_col..end_col {
-        if forest.trees[row][col] > value {
+fn is_visible_horizontal(forest: &Forest, row: usize, start: usize, end: usize, value: i32) -> bool {
+    for col in start..end {
+        if forest.trees[row][col] >= value { 
             return false;
         }
     }
@@ -44,28 +37,79 @@ fn is_tree_visible_in_horizontal_range(forest: &Forest, start_col: usize, end_co
     true
 }
 
-fn is_tree_visible_in_vertical_range(forest: &Forest, start_row: usize, end_row: usize, col: usize, value: i32) -> bool {
-    for row in start_row..end_row {
-        if forest.trees[row][col] > value {
+fn is_visible_vertical(forest: &Forest, col: usize, start: usize, end: usize, value: i32) -> bool {
+    for row in start..end {
+        if forest.trees[row][col] >= value { 
             return false;
         }
     }
 
-    true 
+    true
 }
 
-fn count_visible_trees(forest: &Forest) -> i32 {
+fn find_viewing_distance_horizontal(forest: &Forest, row: usize, start: usize, end: usize, value: i32, reverse: bool) -> i32 {
+    let mut distance = 0;
+
+    if reverse {
+        for col in (start..end).rev() {
+            if forest.trees[row][col] >= value { 
+                return distance + 1;
+            }
+
+            distance += 1;
+        }
+    } else {
+        for col in start..end {
+            if forest.trees[row][col] >= value { 
+                return distance + 1;
+            }
+
+            distance += 1;
+        }
+    } 
+
+    distance
+}
+
+fn find_viewing_distance_vertical(forest: &Forest, col: usize, start: usize, end: usize, value: i32, reverse: bool) -> i32 {
+    let mut distance = 0;
+
+    if reverse {
+        for row in (start..end).rev() {
+            if forest.trees[row][col] >= value { 
+                return distance + 1;
+            }
+
+            distance += 1;
+        }
+    } else {
+        for row in start..end {
+            if forest.trees[row][col] >= value { 
+                return distance + 1;
+            }
+
+            distance += 1;
+        }
+    }
+
+    distance
+}
+
+fn solve_part1(forest: &Forest) -> i32 {
     let mut visible_trees = 0;
 
     for row in 0..forest.trees.len() {
         for col in 0..forest.trees[0].len() {
-            let value = forest.trees[row][col];
-            if is_tree_visible_in_horizontal_range(forest, 0, col, row, value) ||
-               is_tree_visible_in_horizontal_range(forest, col, forest.trees[0].len(), row, value) ||
-               is_tree_visible_in_vertical_range(forest, 0, row, col, value) ||
-               is_tree_visible_in_vertical_range(forest, row, forest.trees.len(), col, value) {
+            let current = forest.trees[row][col];
+
+            let is_visible_from_left = is_visible_horizontal(forest, row, 0, col, current);
+            let is_visible_from_right = is_visible_horizontal(forest, row, col + 1, forest.trees[0].len(), current);
+            
+            let is_visible_from_top = is_visible_vertical(forest, col, 0, row, current);
+            let is_visible_from_bottom = is_visible_vertical(forest, col, row + 1, forest.trees.len(), current);
+            
+            if is_visible_from_left || is_visible_from_right || is_visible_from_top || is_visible_from_bottom {
                 visible_trees += 1;
-                println!("Tree at ({}, {}) is visible", row, col);
             }
         }
     }
@@ -73,3 +117,23 @@ fn count_visible_trees(forest: &Forest) -> i32 {
     visible_trees
 }
 
+fn solve_part2(forest: &Forest) -> i32 {
+    let mut scores = Vec::new(); 
+
+    for row in 0..forest.trees.len() {
+        for col in 0..forest.trees[0].len() {
+            let current = forest.trees[row][col];
+
+            let visible_from_left = find_viewing_distance_horizontal(forest, row, 0, col, current, true);
+            let visible_from_right = find_viewing_distance_horizontal(forest, row, col + 1, forest.trees[0].len(), current, false);
+
+            let visible_from_top = find_viewing_distance_vertical(forest, col, 0, row, current, true);
+            let visible_from_bottom = find_viewing_distance_vertical(forest, col, row + 1, forest.trees.len(), current, false);
+
+            let score = visible_from_left * visible_from_right * visible_from_top * visible_from_bottom;
+            scores.push(score);
+        }
+    }
+
+    scores.iter().max().unwrap().clone()
+}
