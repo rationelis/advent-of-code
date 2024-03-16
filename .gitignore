@@ -5,4 +5,4 @@
 **/target
 
 # Ignore input.txt
-**/input.txt
+**/*.txt
