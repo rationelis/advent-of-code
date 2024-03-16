@@ -43,6 +43,23 @@ type Result<T> = std::result::Result<T, String>;
 fn main() {
     let lines = read_input_file("input.txt").unwrap();
     
+    let root = parse_file_system(lines).unwrap();
+       
+    //print_file_system(&root);
+
+    let directory_sizes = find_sizes_of_directories(&root);
+    
+    let smaller_than_10k = find_sub_directories_with_size_smaller_than_n(100000, directory_sizes.clone());
+
+    println!("Part 1: {:?}", smaller_than_10k.iter().sum::<i32>());
+
+    let used_space = directory_sizes[0];
+    let smallest_to_delete = find_directory_to_free_n(directory_sizes, used_space, 30000000, 70000000);
+
+    println!("Part 2: {:?}", smallest_to_delete);
+}
+
+fn parse_file_system(lines: Vec<String>) -> Result<Directory> {
     let mut root = Directory {
         name: "root".to_string(),
         parent: std::ptr::null(),
@@ -110,42 +127,8 @@ fn main() {
         }
     }
 
-       
-    print_file_system(&root);
-
-    let directory_sizes = find_sizes_of_directories(&root);
-    
-    let smaller_than_10k = find_sub_directories_with_size_smaller_than_n(100000, directory_sizes.clone());
-
-    // Sum of directories smaller than 10000
-    let sum = smaller_than_10k.iter().sum::<i32>();
-    println!("Part 1: {:?}", sum);
-
-    // Find smallest directory to delete to free up at least 3000000 bytes
-    let total_file_system_size = 70000000;
-    let space_needed = 30000000;
-
-    let mut smallest_directory_size = std::i32::MAX;
-
-    for size in &directory_sizes {
-        let diff = total_file_system_size - size;
-        if diff >= space_needed && diff < smallest_directory_size {
-            smallest_directory_size = diff;
-        }
-    }
-
-    let smallest_directory = directory_sizes.iter().find(|&&size| {
-        size == total_file_system_size - smallest_directory_size
-    });
-
-    if let Some(directory_size) = smallest_directory {
-        println!("Part 2: {:?}", directory_size);
-    } else {
-        println!("No directory found to free up enough space.");
-    }   
+    Ok(root)
 }
-
-
 
 fn handle_ls_line(str: &str) -> Result<FileOrDirectory> {
     let mut parts = str.split_whitespace();
@@ -183,7 +166,6 @@ fn parse_command(command: &str) -> Result<Command> {
     }
 }
 
-
 fn find_sub_directories_with_size_smaller_than_n(n: i32, sizes: Vec<i32>) -> Vec<i32> {
     let mut smaller_than_n = Vec::new();
 
@@ -206,7 +188,9 @@ fn find_sizes_of_directories(root: &Directory) -> Vec<i32> {
     while !stack.is_empty() {
         let current = stack.pop().unwrap();
 
-        let size = find_directory_with_size(&current, 100000000);
+        let max = std::i32::MAX;
+
+        let size = find_directory_with_size(&current, max);
 
         directory_sizes.push(size);
 
@@ -230,6 +214,22 @@ fn find_directory_with_size(root: &Directory, size: i32) -> i32 {
     }
 
     total_size
+}
+
+fn find_directory_to_free_n(sizes: Vec<i32>, used_space: i32, required_space: i32, total_space: i32) -> i32 {
+    let mut smallest_to_delete = std::i32::MAX;
+
+    for size in sizes {
+        let space_available = total_space - used_space + size;
+
+        if space_available >= required_space {
+            if size < smallest_to_delete {
+                smallest_to_delete = size;
+            }    
+        }
+    }
+
+    smallest_to_delete
 }
 
 fn print_file_system(root: &Directory) {
