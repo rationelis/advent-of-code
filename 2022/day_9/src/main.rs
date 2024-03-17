@@ -6,31 +6,12 @@ struct Knot {
 }
 
 impl Knot {
-    fn move_to(&self, direction: (i32, i32), bridge: &Bridge) -> Knot {
-        if self.position.0 + direction.0 < 0 || self.position.0 + direction.0 >= bridge.width as i32 {
-            return Knot { position: self.position };
-        }
-
-        if self.position.1 + direction.1 < 0 || self.position.1 + direction.1 >= bridge.height as i32 {
-            return Knot { position: self.position };
-        }
-
+    fn move_to(&self, direction: (i32, i32)) -> Knot {
         Knot { position: (self.position.0 + direction.0, self.position.1 + direction.1) }
     }
-
-    fn find_manhattan_distance(&self, other: &Knot, direction: (i32, i32), bridge: &Bridge) -> i32 {
-        let moved_tail = other.move_to(direction, &bridge);
-        let distance = (moved_tail.position.0 - self.position.0).abs() + (moved_tail.position.1 - self.position.1).abs();
-        distance
-    }
 }
 
-struct Bridge { 
-    rope_area: Vec<Vec<char>>,
-    width: usize,
-    height: usize,
-}
-
+#[derive(Clone)]
 struct Instruction {
     direction: (i32, i32),
     steps: i32,
@@ -38,8 +19,8 @@ struct Instruction {
 
 fn parse_direction(direction: char) -> (i32, i32) {
     match direction {
-        'U' => (0, -1),
-        'D' => (0, 1),
+        'U' => (0, 1),
+        'D' => (0, -1),
         'L' => (-1, 0),
         'R' => (1, 0),
         _ => (0, 0),
@@ -47,80 +28,53 @@ fn parse_direction(direction: char) -> (i32, i32) {
 }
 
 fn main() {
-    let area_file = read_input_file("area.txt").unwrap();
-    
-    let bridge = parse_area(area_file);
-
     let instructions_file = read_input_file("input.txt").unwrap();
 
     let instructions = parse_instructions(instructions_file);
 
-    let mut head = Knot { position: (0, bridge.height as i32 - 1) };
-    let mut tail = Knot { position: (0, bridge.height as i32 - 1) };
+    let part1 = solve_for_n_knots(instructions.clone(), 2);
+    let part2 = solve_for_n_knots(instructions.clone(), 10);
+
+    println!("Part 1: {}", part1);
+    println!("Part 2: {}", part2);
+}
+
+fn solve_for_n_knots(instructions: Vec<Instruction>, n: usize) -> usize {
+    let mut knots = Vec::new();
+
+    for _ in 0..n {
+        knots.push(Knot { position: (0, 0) });
+    }
 
     let mut visited: HashSet<(usize, usize)> = HashSet::new();
-    
-    let all_directions = vec![(0, -1), (0, 1), (-1, 0), (1, 0), (-1, -1), (1, -1), (-1, 1), (1, 1)];
+    visited.insert((0, 0));
 
     for instruction in instructions {
         for _ in 0..instruction.steps {
-            head = head.move_to(instruction.direction, &bridge);
-            
-            let mut min_distance = std::i32::MAX;
-            let mut min_direction = (0, 0);
+            knots[0] = knots[0].move_to(instruction.direction);
 
-            for direction in &all_directions {
-                let distance = tail.find_manhattan_distance(&head, *direction, &bridge);
-                if distance < min_distance {
-                    min_distance = distance;
-                    min_direction = *direction;
+            for i in 1..n {
+                let diff_x = knots[i - 1].position.0 - knots[i].position.0;
+                let diff_y = knots[i - 1].position.1 - knots[i].position.1;
+
+                if diff_x.abs() > 1 || diff_y.abs() > 1 {
+                    knots[i] = knots[i].move_to((diff_x.signum(), diff_y.signum()));
                 }
+
+                visited.insert((knots[n - 1].position.0 as usize, knots[n - 1].position.1 as usize));
             }
-
-            println!("Mindistance: {}", min_distance);
-            println!("Min direction: {}, {}", min_direction.0, min_direction.1);
-
-            tail = tail.move_to(min_direction, &bridge);
-
-            visited.insert((tail.position.0 as usize, tail.position.1 as usize));
-
-            print_area_with_knots(&bridge, &head, &tail);
         }
     }
-}
-
-fn parse_area(lines: Vec<String>) -> Bridge {
-    let area: Vec<Vec<char>> = lines.iter().map(|line| {
-        line.chars().collect()
-    }).collect();
-    Bridge { 
-        rope_area: area.clone(),
-        width: area[0].len(),
-        height: area.len(),
-    }
+    
+    visited.len()
 }
 
 fn parse_instructions(lines: Vec<String>) -> Vec<Instruction> {
     lines.iter().map(|line| {
-        let chars = line.chars().collect::<Vec<char>>();        
-        let direction = parse_direction(chars[0]);
-        let steps = chars[2].to_string().parse::<i32>().unwrap();
+        let parts = line.split_whitespace().collect::<Vec<&str>>();
+        let direction = parse_direction(parts[0].chars().next().unwrap());
+        let steps = parts[1].parse::<i32>().unwrap();
         Instruction { direction, steps }
     }).collect()
-}
-
-fn print_area_with_knots(bridge: &Bridge, head: &Knot, tail: &Knot) {
-    for y in 0..bridge.height {
-        for x in 0..bridge.width {
-            if head.position.0 == x as i32 && head.position.1 == y as i32 {
-                print!("H");
-            } else if tail.position.0 == x as i32 && tail.position.1 == y as i32 {
-                print!("T");
-            } else {
-                print!("{}", bridge.rope_area[y][x]);
-            }
-        }
-        println!();
-    }
 }
 
