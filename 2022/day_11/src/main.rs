@@ -1,35 +1,5 @@
 use utils::read_input_file;
 
-/*
-Monkey 0:
-  Starting items: 79, 98
-  Operation: new = old * 19
-  Test: divisible by 23
-    If true: throw to monkey 2
-    If false: throw to monkey 3
-
-Monkey 1:
-  Starting items: 54, 65, 75, 74
-  Operation: new = old + 6
-  Test: divisible by 19
-    If true: throw to monkey 2
-    If false: throw to monkey 0
-
-Monkey 2:
-  Starting items: 79, 60, 97
-  Operation: new = old * old
-  Test: divisible by 13
-    If true: throw to monkey 1
-    If false: throw to monkey 3
-
-Monkey 3:
-  Starting items: 74
-  Operation: new = old + 3
-  Test: divisible by 17
-    If true: throw to monkey 0
-    If false: throw to monkey 1
-*/
-
 #[derive(Debug, Clone)]
 enum Operation {
     Multiply,
@@ -38,12 +8,12 @@ enum Operation {
 
 #[derive(Debug, Clone)]
 struct Monkey {
-    id: usize,
     items: Vec<i32>,
     operation: (Operation, i32),
     test_divisible_by: i32,
     throw_to_if_true: usize,
     throw_to_if_false: usize,
+    items_inserted: i32,
 }
 
 impl Monkey {
@@ -59,37 +29,40 @@ impl Monkey {
 fn main() {
     let lines = read_input_file("input.txt").unwrap();
 
-    let mut monkeys = get_monkeys(lines);
+    let monkeys = get_monkeys(lines);
 
-    print_monkey_items(&monkeys);
+    let part1 = handle_rounds(&mut monkeys.clone(), 20, false);
+    let part2 = handle_rounds(&mut monkeys.clone(), 10000, true);
 
-    let rounds = 1;
+    println!("Part 1: {}", part1);
+    println!("Part 2: {}", part2);
+}
+
+fn handle_rounds(monkeys: &mut Vec<Monkey>, rounds: i32, should_modulo: bool) -> i64 {
+    let mut reducer = 3;
+    if should_modulo {
+        reducer = monkeys.iter().map(|x| x.test_divisible_by).product();
+    }
     for _ in 0..rounds {
-        for monkey in monkeys.iter() {
-            let updates = handle_round(monkey);
-            for ((worry_level, item), throw_to) in updates {
-                // Borrow mut to remove item
-                monkeys[monkey.id].remove_item(item);
-
-                //monkeys[throw_to].add_item(worry_level);
+        for index in 0..monkeys.len() {
+            let updates = handle_round(monkeys.get(index).unwrap(), should_modulo, reducer);
+            for ((new, old), throw_to) in updates {
+                monkeys[index].remove_item(old);
+                monkeys[index].items_inserted += 1;
+                monkeys[throw_to].add_item(new);
             }
         }
     }
-
-    print_monkey_items(&monkeys);
+    let mut items_inserted = monkeys.iter().map(|x| x.items_inserted).collect::<Vec<i32>>();
+    items_inserted.sort();
+    items_inserted.pop().unwrap() as i64 * items_inserted.pop().unwrap() as i64
 }
 
-fn print_monkey_items(monkeys: &Vec<Monkey>) {
-    for monkey in monkeys.iter() {
-        println!("Monkey {}: {:?}", monkey.id, monkey.items);
-    }
-}
-
-fn handle_round(monkey: &Monkey) -> Vec<((i32, i32), usize)> {
+fn handle_round(monkey: &Monkey, should_modulo: bool, reducer: i32) -> Vec<((i32, i32), usize)> {
     let mut updates = Vec::new();
     for item in monkey.items.iter() {
-        let mut worry_level = *item;
-        let mut operation_value = monkey.operation.1;
+        let mut worry_level = *item as i64;
+        let mut operation_value = monkey.operation.1 as i64;
         if operation_value == 0 {
             operation_value = worry_level;
         }
@@ -97,11 +70,15 @@ fn handle_round(monkey: &Monkey) -> Vec<((i32, i32), usize)> {
             Operation::Multiply => worry_level *= operation_value,
             Operation::Add => worry_level += operation_value,
         }
-        worry_level /= 3;
-        if worry_level % monkey.test_divisible_by == 0 {
-            updates.push(((worry_level, *item), monkey.throw_to_if_true));
+        if should_modulo {
+            worry_level %= reducer as i64;
         } else {
-            updates.push(((worry_level, *item), monkey.throw_to_if_false));
+            worry_level /= reducer as i64;
+        }
+        if worry_level % monkey.test_divisible_by as i64 == 0 {
+            updates.push(((worry_level as i32, *item), monkey.throw_to_if_true));
+        } else {
+            updates.push(((worry_level as i32, *item), monkey.throw_to_if_false));
         }       
     }
     updates
@@ -110,14 +87,14 @@ fn handle_round(monkey: &Monkey) -> Vec<((i32, i32), usize)> {
 fn get_monkeys(lines: Vec<String>) -> Vec<Monkey> {
     lines.split(|line| line.is_empty())
         .enumerate()
-        .map(|(id, block)| {
+        .map(|(_id, block)| {
             let mut monkey = Monkey {
-                id,
                 items: Vec::new(),
                 operation: (Operation::Multiply, 0),
                 test_divisible_by: 0,
                 throw_to_if_true: 0,
                 throw_to_if_false: 0,
+                items_inserted: 0,
             };
 
             for (i, line) in block.iter().enumerate().skip(1) {
