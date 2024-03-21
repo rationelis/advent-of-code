@@ -33,14 +33,8 @@ impl Grid {
     }
 
     fn find_lowest_elevation(&self) -> Vec<(usize, usize)> {
-        self.grid.iter().enumerate().flat_map(|(i, row)| {
-            row.iter().enumerate().filter_map(move |(j, &c)| {
-                if c == 'a' {
-                    Some((i, j))
-                } else {
-                    None
-                }
-            })
+        self.grid.iter().enumerate().filter_map(|(i, row)| {
+            row[0].eq(&'a').then(|| (i, 0))
         }).collect()
     }
 }
@@ -57,15 +51,10 @@ fn main() {
     let lowest_elevation = grid.find_lowest_elevation(); 
 
     let part2 = lowest_elevation.iter().map(|&(x, y)| {
-        let mut new_grid = grid.grid.clone();
-        new_grid[x][y] = 'a';
-
+        let new_grid = grid.grid.clone();
         let new_grid = Grid { grid: new_grid, start: (x, y), end: grid.end };
-
         find_shortest_path(&new_grid)
-    });
-
-    let part2 = part2.filter(|&x| x != -1).min().unwrap();
+    }).min().unwrap(); 
 
     println!("Part 2: {}", part2);
 }
