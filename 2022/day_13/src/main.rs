@@ -5,7 +5,7 @@ use std::str::Chars;
 use std::cmp::Ordering;
 use itertools::Itertools;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 enum Packet {
     List(Vec<Packet>),
     Int(i32),
@@ -116,22 +116,33 @@ fn test_parse_packet() {
 
 fn compare_packets(p1: &Packet, p2: &Packet) -> Ordering {
     match (p1, p2) {
-        (Packet::Int(n1), Packet::Int(n2)) => n1.cmp(n2),
-        (Packet::List(l1), Packet::List(l2)) => {
-            for (p1, p2) in l1.iter().zip(l2.iter()) {
-                match compare_packets(p1, p2) {
-                    Ordering::Equal => continue,
-                    ord => return ord,
+        (&Packet::Int(lint), &Packet::Int(rint)) => lint.cmp(&rint),
+        (&Packet::List(ref llist), &Packet::List(ref rlist)) => {
+            let mut lelems = llist.iter();
+            let mut relems = rlist.iter();
+
+            loop {
+                let left = lelems.next();
+                let right = relems.next();
+
+                match (left, right) {
+                    (None, Some(_)) => return Ordering::Less,
+                    (Some(_), None) => return Ordering::Greater,
+                    (None, None) => return Ordering::Equal,
+                    (Some(left), Some(right)) => match compare_packets(left, right) {
+                        Ordering::Equal => continue,
+                        Ordering::Less => return Ordering::Less,
+                        Ordering::Greater => return Ordering::Greater,
+                    },
                 }
             }
-            l1.len().cmp(&l2.len())
-        },
-        (Packet::Int(_), Packet::List(_)) => {
-            compare_packets(p1, &Packet::Int(0))
-        },
-        (Packet::List(_), Packet::Int(_)) => {
-            compare_packets(&Packet::Int(0), p2)
-        },
+        }
+        (&Packet::Int(lint), right_packet_list) => {
+            compare_packets(&Packet::List(vec![Packet::Int(lint)]), right_packet_list)
+        }
+        (left_packet_list, &Packet::Int(rint)) => {
+            compare_packets(left_packet_list, &Packet::List(vec![Packet::Int(rint)]))
+        }
     }
 }
 
@@ -144,7 +155,8 @@ fn parse_input(lines: &[String]) -> Vec<Packet> {
 
 fn main() {
     let lines = read_input_file("input.txt").unwrap();
-    let packets = parse_input(&lines);
+    
+    let mut packets = parse_input(&lines);
 
     let indices_left_smaller = Itertools::tuples(packets.iter())
         .enumerate()
@@ -153,5 +165,16 @@ fn main() {
         .sum::<usize>();
 
     println!("Part 1: {}", indices_left_smaller);
-}
 
+    let divider_1 = Packet::List(vec![Packet::List(vec![Packet::Int(2)])]);
+    let divider_2 = Packet::List(vec![Packet::List(vec![Packet::Int(6)])]);
+
+    packets.extend(vec![divider_1.clone(), divider_2.clone()]);
+
+    let sorted_packets = packets.iter().sorted_by(|p1, p2| compare_packets(p1, p2));
+
+    let index_2 = sorted_packets.clone().position(|packet| compare_packets(packet, &divider_1) == Ordering::Equal).unwrap() + 1;
+    let index_6 = sorted_packets.clone().position(|packet| compare_packets(packet, &divider_2) == Ordering::Equal).unwrap() + 1;
+
+    println!("Part 2: {}", index_2 * index_6);
+}
