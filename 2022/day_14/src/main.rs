@@ -7,18 +7,24 @@ struct Point {
     y: i32,
 }
 
+#[derive(Debug, Clone)]
 struct Structure {
     rocks: HashSet<Point>,
+    highest_y: i32,
 }
 
 impl Structure {
     fn new() -> Structure {
         Structure {
             rocks: HashSet::new(),
+            highest_y: 0,
         }
     }
 
     fn add_rock(&mut self, rock: Point) {
+        if rock.y > self.highest_y {
+            self.highest_y = rock.y;
+        } 
         self.rocks.insert(rock);
     }
 
@@ -43,7 +49,22 @@ impl Structure {
 fn main() {
     let lines = read_input_file("input.txt").unwrap();
 
-    let mut structure = generate_structure(lines);
+    let structure = generate_structure(lines);
+
+    let part1 = pour_sand(&mut structure.clone(), false); 
+    let part2 = pour_sand(&mut structure.clone(), true);
+    
+    println!("Part 1: {}", part1);
+    println!("Part 2: {}", part2);
+}
+
+fn pour_sand(structure: &mut Structure, has_floor: bool) -> i32 {
+    if has_floor {
+        let floor_y = structure.highest_y + 2;
+        for x in -2000..2000 {
+            structure.add_rock(Point { x, y: floor_y });
+        }
+    }
 
     let starting_point = Point { x: 500, y: 0 };
 
@@ -59,9 +80,14 @@ fn main() {
         let mut grain = starting_point;
 
         loop {
+            if structure.is_blocked(grain) {
+                reached_bottom = true;
+                break;
+            }
+
             let down = Point { x: grain.x, y: grain.y + 1 };
 
-            if down.y > 2000 {
+            if down.y > 2000 && !has_floor {
                 reached_bottom = true;
                 break;
             }
@@ -91,7 +117,7 @@ fn main() {
         }
     }
 
-    println!("Sand grains: {}", sand.len());
+    sand.len() as i32
 }
 
 fn generate_structure(lines: Vec<String>) -> Structure {
@@ -127,7 +153,7 @@ fn generate_structure(lines: Vec<String>) -> Structure {
             }
         }
     } 
-
+    
     structure 
 }
 
