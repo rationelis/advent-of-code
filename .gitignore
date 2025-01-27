@@ -6,3 +6,6 @@
 
 # Ignore input.txt
 **/*.txt
+
+# Ignore main
+**/*/main
