@@ -1,23 +1,9 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
-
-#define INPUT_LENGTH 5000
-#define LINE_BYTES 50
+#include "../common.h"
 
 int comp(const void* a, const void* b) {
     return (*(int*)a - *(int*)b);
-}
-
-void read_input(char **input, int *length) {
-    char buffer[LINE_BYTES];
-    *length = 0;
-
-    while (fgets(buffer, sizeof(buffer), stdin) != NULL) {
-        input[*length] = malloc(strlen(buffer) + 1);
-        if (!input[*length]) exit(1);
-        strcpy(input[(*length)++], buffer);
-    }
 }
 
 int main() {
