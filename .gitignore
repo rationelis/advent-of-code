@@ -1,7 +1,9 @@
-# Ignore Cargo.lock file
-**/Cargo.lock
+# Ignore Haskell
+**/*.o
+**/*.hi
 
-# Ignore build artifacts
+# Ignore Rust
+**/Cargo.lock
 **/target
 
 # Ignore input.txt
