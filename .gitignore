@@ -10,7 +10,7 @@
 **/*.txt
 
 # Allow 2025 test files
-!2025/rust/src/**/*.txt
+!aoc2025//src/*.txt
 
 # Ignore main
 **/*/main
