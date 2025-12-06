@@ -9,5 +9,8 @@
 # Ignore input.txt
 **/*.txt
 
+# Allow 2025 test files
+!2025/rust/src/**/*.txt
+
 # Ignore main
 **/*/main
