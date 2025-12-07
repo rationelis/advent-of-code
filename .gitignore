@@ -10,7 +10,7 @@
 **/*.txt
 
 # Allow 2025 test files
-!aoc2025//src/*.txt
+!aoc2025/src/*.txt
 
 # Ignore main
 **/*/main
